@@ -6,13 +6,11 @@ Additional documentation and a tutorial are coming soon; for now, the code is pr
 
 The files are meant to be used in the following order:
 
-1. `preprocessing_app.py` (PyQt app) - use rotation and translation to perform rough alignment of the OPT volume
-2. `opt_volume_creator.py` (script) - the alignment parameters from step 1 are used to generate a 3D volume (in Drishti format) from a series of TIFFs
-3. `registration_app.py` (PyQt app) - manual selection of key points used for registration
-4. `annotation_app.py` (PyQt app) - manual annotation of probe tracks
-5. `volume_registration.py` (script) - use the outputs of the registration and annotation apps to extract CCF structure ids along the probe tracks
-6. `align_to_physiology.py` (script) - extract physiological markers from the raw Neuropixels data
-7. `refinement_app.py` (PyQt app) - adjust the structure boundaries based on physiological landmarks
+1. `TC_make_color_volume.py` (PyQt app) - unzips "resampled_images.zip" and combines the color volumes into "resampled_color_volume.npy" for the annotation step
+2. `annotation_app.py` (PyQt app) - manual annotation of probe tracks - modified from the original to read the .npy file and plot a colored volume
+3. `TC_align_to_ephys.py` (script) - use the outputs of the annotation app to extract CCF structure ids along the probe tracks and extract physiological markers from the raw Neuropixels data
+4. `refinement_app.py` (PyQt app) - adjust the structure boundaries based on physiological landmarks
+5. `TC_save_locations.py` (script) - adds CCF coordinates and locations to each "probe_info.json" file in the experiment
 
 ## Installation (using conda)
 
@@ -48,7 +46,7 @@ This app assumes you have a directory containing data for one reconstructed OPT 
             +-- imgRot__rec31.tif
             +-- imgRot__rec32.tif
             +-- ...
-``` 
+```
 To launch the app (assuming you've already created a conda environment by following the instructions above), enter the following from the `Analysis` directory:
 
 
@@ -88,5 +86,3 @@ $ python opt_volume_creator.py <path_to_transform.json>
 This will create a directory containing the 1 GB `fluor` and `trans` volumes in [Drishti](https://github.com/nci/drishti) format. These volumes can be loaded directly into the registration and annotation apps for further processing.
 
 **NOTE:** This step may be quite slow, especially if you're loading the images over a network connection.
-
-
