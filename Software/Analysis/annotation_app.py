@@ -1,6 +1,6 @@
 """
 
-This app allows a user to browse through an OPT volume and mark probe track locations.
+This app allows a user to browse through a Tissuecyte volume and mark probe track locations.
 
 """
 
@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QGridLayout, QFi
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5.QtGui import QIcon, QKeyEvent, QImage, QPixmap, QColor
 from PyQt5.QtCore import pyqtSlot, Qt
+import SimpleITK as sitk
 
 from PIL import Image, ImageQt
 
@@ -17,19 +18,23 @@ import numpy as np
 import pandas as pd
 
 import os
+import time
 
-DEFAULT_SLICE = 400
+DEFAULT_SLICE = 200
 DEFAULT_VIEW = 0
+SCALING_FACTOR = 1.5
 
 class App(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.title = 'OPT Annotation'
+        self.title = 'Tissuecyte Annotation'
         self.left = 500
         self.top = 100
-        self.width = 800
-        self.height = 800
+        # self.width = int(400*SCALING_FACTOR)
+        # self.height = int(400*SCALING_FACTOR)
+        self.width = int(456*SCALING_FACTOR) #default = coronal view
+        self.height = int(320*SCALING_FACTOR)
         self.initUI()
 
     def initUI(self):
@@ -41,7 +46,7 @@ class App(QWidget):
         self.image = QLabel()
         self.image.setObjectName("image")
         self.image.mousePressEvent = self.clickedOnImage
-        im8 = Image.fromarray(np.ones((800,800),dtype='uint8')*255)
+        im8 = Image.fromarray(np.ones((self.height,self.width),dtype='uint8')*255)
         imQt = QImage(ImageQt.ImageQt(im8))
         imQt.convertToFormat(QImage.Format_ARGB32)
         self.image.setPixmap(QPixmap.fromImage(imQt))
@@ -49,12 +54,12 @@ class App(QWidget):
 
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
-        self.slider.setMaximum(1022)
+        self.slider.setMaximum(528)
         self.slider.setValue(DEFAULT_SLICE)
         self.slider.setTickPosition(QSlider.TicksBelow)
-        self.slider.setTickInterval(100)
+        self.slider.setTickInterval(50)
         self.slider.valueChanged.connect(self.sliderMoved)
-        grid.addWidget(self.slider, 1,0)
+        grid.addWidget(self.slider, 1, 0)
 
         self.slider_values = [DEFAULT_SLICE, DEFAULT_SLICE, DEFAULT_SLICE]
 
@@ -120,6 +125,8 @@ class App(QWidget):
 
         self.selected_probe = None
 
+        self.refresh_time=[]
+
         self.setLayout(grid)
         self.viewCoronal()
         self.show()
@@ -177,11 +184,11 @@ class App(QWidget):
     def clickedOnImage(self , event):
 
         if self.data_loaded:
-            x = int(event.pos().x() * 1024 / 800)
-            y = int(event.pos().y() * 1024 / 800)
+            x = int(event.pos().x()/SCALING_FACTOR)
+            y = int(event.pos().y()/SCALING_FACTOR)
 
-            #print('X: ' + str(x))
-            #print('Y: ' + str(y))
+            # print('X: ' + str(x))
+            # print('Y: ' + str(y))
 
             if self.selected_probe is not None:
                 #print('updating volume')
@@ -201,16 +208,16 @@ class App(QWidget):
                                                        (self.annotations.probe_name ==
                                                         self.selected_probe)].index.values
                 elif self.current_view == 2:
-                    AP = 1023 - x
+                    AP = x
                     DV = y
                     ML = self.slider.value()
                     matching_index = self.annotations[(self.annotations.ML == ML) &
                                                        (self.annotations.probe_name ==
                                                         self.selected_probe)].index.values
 
-
-                if len(matching_index) > 0:
-                    self.annotations = self.annotations.drop(index=matching_index)
+                # Remove limitation of 1 point per probe per slice
+                # if len(matching_index) > 0:
+                #     self.annotations = self.annotations.drop(index=matching_index)
 
                 self.annotations = self.annotations.append(pd.DataFrame(data = {'AP' : [AP],
                                     'ML' : [ML],
@@ -240,6 +247,10 @@ class App(QWidget):
 
         self.current_view = 0
         self.slider.setValue(self.slider_values[self.current_view])
+        self.slider.setMaximum(528)
+        self.width = int(456*SCALING_FACTOR)
+        self.height = int(320*SCALING_FACTOR)
+        # self.setGeometry(self.left, self.top, self.width, self.height)
         self.coronal_button.setStyleSheet("background-color: gray")
         self.horizontal_button.setStyleSheet("background-color: white")
         self.sagittal_button.setStyleSheet("background-color: white")
@@ -249,6 +260,10 @@ class App(QWidget):
 
         self.current_view = 1
         self.slider.setValue(self.slider_values[self.current_view])
+        self.slider.setMaximum(320)
+        self.width = int(456*SCALING_FACTOR)
+        self.height = int(528*SCALING_FACTOR)
+        # self.setGeometry(self.left, self.top, self.width, self.height)
         self.coronal_button.setStyleSheet("background-color: white")
         self.horizontal_button.setStyleSheet("background-color: gray")
         self.sagittal_button.setStyleSheet("background-color: white")
@@ -258,83 +273,109 @@ class App(QWidget):
 
         self.current_view = 2
         self.slider.setValue(self.slider_values[self.current_view])
+        self.slider.setMaximum(456)
+        self.width = int(528*SCALING_FACTOR)
+        self.height = int(320*SCALING_FACTOR)
+        # self.setGeometry(self.left, self.top, self.width, self.height)
         self.coronal_button.setStyleSheet("background-color: white")
         self.horizontal_button.setStyleSheet("background-color: white")
         self.sagittal_button.setStyleSheet("background-color: gray")
         self.refreshImage()
 
     def refreshImage(self):
-
         colors = ('darkred', 'orangered', 'goldenrod',
             'darkgreen', 'darkblue', 'blueviolet',
             'red','orange','yellow','green','blue','violet')
 
         if self.data_loaded:
-            plane = np.take(self.volume,
-                 self.slider.value(),
-                 axis=self.current_view)
-            if self.current_view == 2:
-                plane = plane.T
-            im8 = Image.fromarray(plane)
+            if self.current_view == 0:
+                plane = self.volume[self.slider.value(),:,:,:]
+            elif self.current_view == 1:
+                plane = self.volume[:,self.slider.value(),:,:]
+            elif self.current_view == 2:
+                plane = self.volume[:,:,self.slider.value(),:]
+                plane = np.swapaxes(plane, 0, 1) # plane.T
+            # im8 = Image.fromarray(plane)
         else:
-            im8 = Image.fromarray(np.ones((1024,1024),dtype='uint8')*255)
+            # im8 = Image.fromarray(np.ones((self.height,self.width,3),dtype='uint8')*255)
+            plane = np.ones((self.height,self.width,3),dtype='uint8')*255
 
-        imQt = QImage(ImageQt.ImageQt(im8))
-        imQt = imQt.convertToFormat(QImage.Format_RGB16)
-
-        #print(self.current_view)
-        #print(self.slider.value())
+        image = plane.copy()
+        height, width, channels = image.shape
+        bytesPerLine = channels * width
+        imQt = QImage(
+            image.data, width, height, bytesPerLine, QImage.Format_RGB888
+        )
+        # imQt = QImage(ImageQt.ImageQt(im8))
+        # imQt = imQt.convertToFormat(QImage.Format_RGB16)
 
         if self.data_loaded:
             for idx, row in self.annotations.iterrows():
 
                 if self.current_view == 0:
                     shouldDraw = row.AP == self.slider.value()
+                    # x = int(row.ML*SCALING_FACTOR)
+                    # y = int(row.DV*SCALING_FACTOR)
                     x = row.ML
                     y = row.DV
                 elif self.current_view == 1:
                     shouldDraw = row.DV == self.slider.value()
+                    # x = int(row.ML*SCALING_FACTOR)
+                    # y = int(row.AP*SCALING_FACTOR)
                     x = row.ML
                     y = row.AP
                 elif self.current_view == 2:
                     shouldDraw = row.ML == self.slider.value()
-                    x = 1023 - row.AP
+                    # x = int(row.AP*SCALING_FACTOR)
+                    # y = int(row.DV*SCALING_FACTOR)
+                    x = row.AP
                     y = row.DV
 
                 if shouldDraw:
                     color = QColor(self.color_map[row.probe_name])
+                    point_size = int(2)
 
-                    for j in range(x-10,x+10):
-                        for k in range(y-10,y+10):
-                            if pow(j-x,2) + pow(k-y,2) < 20:
+                    for j in range(x-point_size,x+point_size):
+                        for k in range(y-point_size,y+point_size):
+                            if pow(j-x,2) + pow(k-y,2) < 10:
                                 imQt.setPixelColor(j,k,color)
 
-        pxmap = QPixmap.fromImage(imQt).scaledToWidth(800).scaledToHeight(800)
+        pxmap = QPixmap.fromImage(imQt).scaledToWidth(self.width).scaledToHeight(self.height)
         self.image.setPixmap(pxmap)
+        self.setGeometry(self.left, self.top, self.width, self.height)
 
     def loadData(self):
 
         fname, filt = QFileDialog.getOpenFileName(self,
             caption='Select volume file',
             directory=self.current_directory,
-            filter='*nc.001')
+            filter='*.npy') # filter='*.mhd')
 
         print(fname)
 
         self.current_directory = os.path.dirname(fname)
         self.output_file = os.path.join(self.current_directory, 'probe_annotations.csv')
 
-        if fname.split('.')[-1] == '001':
-
+        if fname.split('.')[-1] == 'mhd':
+            self.volume_type='TC'
             self.volume = self.loadVolume(fname)
             self.data_loaded = True
             self.setWindowTitle(os.path.basename(fname))
-
             if os.path.exists(self.output_file):
                 self.annotations = pd.read_csv(self.output_file, index_col=0)
             else:
                 self.annotations = pd.DataFrame(columns = ['AP','ML','DV', 'probe_name'])
+            self.refreshImage()
 
+        elif fname.split('.')[-1] == 'npy':
+            self.volume_type='TC'
+            self.volume = self.loadcolorVolume(fname)
+            self.data_loaded = True
+            self.setWindowTitle(os.path.basename(fname))
+            if os.path.exists(self.output_file):
+                self.annotations = pd.read_csv(self.output_file, index_col=0)
+            else:
+                self.annotations = pd.DataFrame(columns = ['AP','ML','DV', 'probe_name'])
             self.refreshImage()
 
         else:
@@ -345,24 +386,35 @@ class App(QWidget):
         if self.data_loaded:
             self.annotations.to_csv(self.output_file)
 
-    def loadVolume(self, fname, _dtype='u1', num_slices=1023):
+    def loadVolume(self, fname, _dtype='u1'):
+
+        resampled_image = sitk.ReadImage(fname)
+        volume_temp = np.double(sitk.GetArrayFromImage(resampled_image)).transpose(2,1,0)
+
+        upper_q=np.percentile(volume_temp,99)
+        lower_q=np.percentile(volume_temp,50)
+
+        #scaled & convert to uint8:
+        volume_scaled = (volume_temp-lower_q)/(upper_q-lower_q)
+        volume_scaled[volume_scaled<0]=0
+        volume_scaled[volume_scaled>1]=1
+
+        volume_sc_int8 = np.round(volume_scaled*255)
 
         dtype = np.dtype(_dtype)
 
-        volume = np.fromfile(fname, dtype) # read it in
-
-        z_size = np.sum([volume[1], volume[2] << pow(2,3)])
-        x_size = np.sum([(val << pow(2,i+1)) for i, val in enumerate(volume[8:4:-1])])
-        y_size = np.sum([(val << pow(2,i+1)) for i, val in enumerate(volume[12:8:-1])])
-
-        fsize = np.array([z_size, x_size, y_size]).astype('int')
-
-        volume = np.reshape(volume[13:], fsize) # remove 13-byte header and reshape
+        volume = np.asarray(volume_sc_int8, dtype)
 
         print("Data loaded.")
 
         return volume
 
+    def loadcolorVolume(self, fname, _dtype='u1'): # LC added
+        volume_temp = np.load(fname)
+        # dtype = np.dtype(_dtype)
+        # volume = np.asarray(volume_temp, dtype)
+        print("Data loaded.")
+        return volume_temp
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
