@@ -68,7 +68,7 @@ class App(QWidget):
         self.image = QLabel()
         self.image.setObjectName("image")
         self.image.mousePressEvent = self.clickedOnImage
-        im8 = Image.fromarray(np.ones((self.height,self.width),dtype='uint8')*255)
+        im8 = Image.fromarray(np.ones((self.width, self.height),dtype='uint8')*255)
         imQt = QImage(ImageQt.ImageQt(im8))
         imQt.convertToFormat(QImage.Format_ARGB32)
         self.image.setPixmap(QPixmap.fromImage(imQt))
@@ -109,7 +109,9 @@ class App(QWidget):
                      'Probe E1': 'darkblue', 'Probe F1': 'blueviolet',
                      'Probe A2': 'red', 'Probe B2': 'darkturquoise',
                      'Probe C2': 'yellow', 'Probe D2' : 'green',
-                     'Probe E2': 'blue', 'Probe F2': 'violet'}
+                     'Probe E2': 'blue', 'Probe F2': 'violet', 'Probe C3': 'violet', 'Probe B3': 'violet',
+                     'Probe B4': 'violet', 'Probe B5': 'violet', 'Probe C5': 'Violet', 'Probe C4': 'Violet', 'Probe A4': 'Violet', 'Probe A5': 'Violet',
+                     'Probe D3': 'red', 'Probe A3': 'violet', 'Probe D4': 'green'}
 
         self.probe_buttons = [QPushButton('Probe ' + i) for i in self.probes]
 
@@ -514,22 +516,8 @@ class App(QWidget):
     # function that updates the image plane where certain events are triggered such as moving a slider or clicking a button
     def refreshImage(self, toggle='None', slider_moved='None', val=0, change_view=False):
         colors = ('darkred', 'orangered', 'goldenrod',
-            'darkgreen', 'darkblue', 'blueviolet',
-            'red','orange','yellow','green','blue','violet')
-        """
-        if reset:
-            self.red_slider.setValue(DEFAULT_COLOR_VALUES[0][1])
-            self.red_button.setChecked(False)
-            self.red_checked = False
+            'darkgreen', 'darkblue', 'blueviolet',)
 
-            self.green_slider.setValue(DEFAULT_COLOR_VALUES[1][1])
-            self.green_button.setChecked(False)
-            self.green_checked = False
-
-            self.blue_slider.setValue(DEFAULT_COLOR_VALUES[2][1])
-            self.blue_button.setChecked(False)
-            self.blue_checked = False
-        """
         if self.data_loaded:
             if self.current_view == 0:
                 plane = self.volume[self.slider.value(),:,:,:]
@@ -678,7 +666,6 @@ class App(QWidget):
         self.setGeometry(self.left, self.top, self.width, self.height)
 
     def loadData(self):
-
         fname, filt = QFileDialog.getOpenFileName(self,
             caption='Select volume file',
             directory=self.current_directory)

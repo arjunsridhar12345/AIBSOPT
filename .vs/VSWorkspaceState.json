@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\Software",
+    "\\Software\\Analysis"
   ],
-  "SelectedNode": "\\C:\\Users\\arjun.sridhar\\source\\repos\\AIBSOPT_PyqtGraph",
+  "SelectedNode": "\\Software\\Analysis\\annotation_app_pyqtgraph.py",
   "PreviewInSolutionExplorer": false
 }
