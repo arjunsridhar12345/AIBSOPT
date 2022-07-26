@@ -294,7 +294,7 @@ class TissuecyteApp(QWidget):
         self.trial = text
         self.updateProbeLabel()
     
-    def updateProbeHelper(self, color):
+    def updateProbeHelper(self):
         #self.colorLabel.setText(self.colors[self.probeName + self.trial])
         self.colorLabel.setText('')
         self.colorLabel.setStyleSheet("background-color: rgb%s;color: black;font: 12px" %(self.rgb[self.probeName + self.trial]))
@@ -341,24 +341,7 @@ class TissuecyteApp(QWidget):
 
     def updateProbeLabel(self):
         if self.probeName != 'Probe' and self.trial != 'Trial':
-            if self.probeName == 'A':
-                color = 'red'
-                self.updateProbeHelper(color)
-            elif self.probeName == 'B':
-                color = 'blue'
-                self.updateProbeHelper(color)
-            elif self.probeName == 'C':
-                color = 'magenta'
-                self.updateProbeHelper(color)
-            elif self.probeName == 'D':
-                color = 'yellow'
-                self.updateProbeHelper(color)
-            elif self.probeName == 'E':
-                color = 'cyan'
-                self.updateProbeHelper(color)
-            elif self.probeName == 'F':
-                color = 'green'
-                self.updateProbeHelper(color)
+            self.updateProbeHelper()
     
     def resetSliders(self):
         self.redSlider.setValue((DEFAULT_COLOR_VALUES[0][0], DEFAULT_COLOR_VALUES[0][1]))
@@ -367,7 +350,7 @@ class TissuecyteApp(QWidget):
         
         self.refreshImage(change_view=True)
 
-    # clears the annotations
+    # clears the annotations, does not remove them from csv
     def clearAnnotations(self):
         view = self.image.getView()
 
@@ -679,17 +662,6 @@ class TissuecyteApp(QWidget):
                         y = row.DV
 
                     if shouldDraw:
-                        """
-                        if value_draw: # use probe information from annotations
-                            print(row.probe_name)
-                            probe = row.probe_name[row.probe_name.index(' ') + 1:]
-                            probe_let = probe[0]
-                            probe_num = probe[1]
-
-                        if click_draw: # click happened
-                            probe_let = self.selectedProbe[0]
-                            probe_num = self.selectedProbe[1]
-                        """
                         probe = row.probe_name[row.probe_name.index(' ') + 1:]
                         probe_let = probe[0]
                         probe_num = probe[1]
@@ -697,82 +669,6 @@ class TissuecyteApp(QWidget):
                         if value_draw or click_draw:
                             color = QColor(self.colors[probe_let + probe_num])
                             self.drawPoints(color, probe_let, probe_num, posx, posy, x, y)
-                            """
-                            if probe_let == 'A':
-                                if probe_num == '1':
-                                    color = QColor(self.colors[probe_let + probe_num])
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                                
-                            
-                            elif probe_let == 'B':
-                                color = Qt.blue
-                                if probe_num == '1':
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                            elif probe_let == 'C':
-                                color = Qt.magenta
-                                if probe_num == '1':
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                            elif probe_let == 'D':
-                                color = Qt.yellow
-                                if probe_num == '1':
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                            elif probe_let == 'E':
-                                color = Qt.cyan
-                                if probe_num == '1':
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                            elif probe_let == 'F':
-                                color = Qt.green
-                                if probe_num == '1':
-                                    self.drawPoints('fdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '2':
-                                    self.drawPoints('hor', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '3':
-                                    self.drawPoints('ver', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '4':
-                                    self.drawPoints('bdiag', color, posx, posy, x, y, probe_let + probe_num)
-                                elif probe_num == '5':
-                                    self.drawPoints('cross', color, posx, posy, x, y, probe_let + probe_num)
-                            """
 
     # loads data from file selected
     def loadData(self):
