@@ -22,6 +22,7 @@ from zipfile import ZipFile
 import SimpleITK as sitk
 from glob import glob
 import pandas as pd
+import statistics
 
 # constants used by app
 DEFAULT_SLICE = 200
@@ -166,10 +167,15 @@ class TissuecyteApp(QWidget):
         self.deleteButton.clicked.connect(self.deletePoint)
         self.deleteButton.setStyleSheet("color: red;font: bold 12px")
 
-        # clear button
-        self.clearButton = QPushButton('Clear Annotations', self)
-        self.clearButton.setToolTip('Clear Annotations')
-        self.clearButton.clicked.connect(self.clearAnnotations)
+        # hide button
+        self.hideButton = QPushButton('Hide Points', self)
+        self.hideButton.setToolTip('Hide Points')
+        self.hideButton.clicked.connect(self.hidePoints)
+
+        # unhide button
+        self.showButton = QPushButton('Show Points', self)
+        self.showButton.setToolTip('Show Points')
+        self.showButton.clicked.connect(self.showPoints)
 
         # point lock
         self.pointLockButton = QPushButton('Point Lock ON', self)
@@ -185,8 +191,9 @@ class TissuecyteApp(QWidget):
         self.buttonsLayout.addWidget(self.saveButton,3,2)
         self.buttonsLayout.addWidget(self.loadButton,3,3)
         self.buttonsLayout.addWidget(self.deleteButton, 3, 4)
-        self.buttonsLayout.addWidget(self.clearButton, 3, 5)
-        self.buttonsLayout.addWidget(self.pointLockButton, 3, 6)
+        self.buttonsLayout.addWidget(self.hideButton, 3, 5)
+        self.buttonsLayout.addWidget(self.showButton, 3, 6)
+        self.buttonsLayout.addWidget(self.pointLockButton, 3, 7)
 
         # add buttons to left layout
         self.leftLayout.addLayout(self.buttonsLayout)
@@ -351,13 +358,17 @@ class TissuecyteApp(QWidget):
         self.refreshImage(change_view=True)
 
     # clears the annotations, does not remove them from csv
-    def clearAnnotations(self):
+    def hidePoints(self):
         view = self.image.getView()
 
         while len(view.addedItems) > 3:
             view.removeItem(view.addedItems.pop())
 
 
+    # shows the hidden points
+    def showPoints(self):
+        self.refreshImage(value_draw=True)
+    
     def clickedOnImage(self , event):
         print('Click')
         event.accept()
@@ -541,9 +552,9 @@ class TissuecyteApp(QWidget):
 
     # helper function to draw points from click or dataframe
     def drawPointsHelper(self, j, k, color, probe):
-        c = QtWidgets.QGraphicsRectItem(j, k, 1, 1)
-        c.setPen(QtGui.QPen(Qt.white, 0.0001))
-        c.setBrush(QtGui.QBrush(color, Qt.SolidPattern))
+        c = QtWidgets.QGraphicsRectItem(j, k, 0.1, 0.1)
+        c.setPen(QtGui.QPen(color, 1))
+        #c.setBrush(QtGui.QBrush(color, Qt.SolidPattern))
        
         view = self.image.getView()
         view.addItem(c)
@@ -551,20 +562,25 @@ class TissuecyteApp(QWidget):
     
     def drawPoints(self, color, probe_let, probe_trial, posx, posy, x, y):
         point_size = int(2)
-
+        
         if posx is not None and posy is not None: # clicking has occurred, so use posx and posy, mouse coords
+             draw = False
              for j in range(posx-point_size,posx+point_size):
                  for k in range(posy-point_size,posy+point_size):
                      if pow(j-x,2) + pow(k-y,2) < 10:
                          #print(j, k)
-                         self.drawPointsHelper(j, k, color, probe_let + probe_trial)                            
+                         if not draw:
+                            self.drawPointsHelper(j, k, color, probe_let + probe_trial)
+                            #draw = True
         else: # no clicking has occurred, so use x and y from annotations dataframe - see refresh image function
-             for j in range(x-point_size,x+point_size):
+            draw = False
+            for j in range(x-point_size,x+point_size):
                  for k in range(y-point_size,y+point_size):
                      if pow(j-x,2) + pow(k-y,2) < 10:
                          #print(j, k)
-                         self.drawPointsHelper(j, k, color, probe_let + probe_trial)
-
+                         if not draw:
+                            self.drawPointsHelper(j, k, color, probe_let + probe_trial)
+                            #draw = True
 
     # function that updates the image plane where certain events are triggered such as moving a slider or clicking a button
     # change view - save current settings of sliders, checks, etc. and then change to new view with these settings
