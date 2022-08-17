@@ -345,7 +345,7 @@ class TissuecyteApp(QWidget):
                         view.removeItem(point)
                     
                     #self.refreshImage(value_draw=True)
-
+    
     def updateProbeLabel(self):
         if self.probeName != 'Probe' and self.trial != 'Trial':
             self.updateProbeHelper()
@@ -490,7 +490,7 @@ class TissuecyteApp(QWidget):
             self.refreshImage(change_view=False)
             self.initial = False
         else:
-            self.clearAnnotations()
+            self.hidePoints()
             self.refreshImage(change_view=True, value_draw=True)
     
     # horizontal view
@@ -508,7 +508,7 @@ class TissuecyteApp(QWidget):
         if self.initial:
             self.refreshImage(change_view=False)
         else:
-            self.clearAnnotations()
+            self.hidePoints()
             self.refreshImage(change_view=True, value_draw=True)
 
     # sagittal view
@@ -527,7 +527,7 @@ class TissuecyteApp(QWidget):
         if self.initial:
             self.refreshImage(change_view=False)
         else:
-            self.clearAnnotations()
+            self.hidePoints()
             self.refreshImage(change_view=True, value_draw=True)
     
     # helper function to threshold image
@@ -552,7 +552,7 @@ class TissuecyteApp(QWidget):
 
     # helper function to draw points from click or dataframe
     def drawPointsHelper(self, j, k, color, probe):
-        c = QtWidgets.QGraphicsRectItem(j, k, 0.1, 0.1)
+        c = QtWidgets.QGraphicsRectItem(j, k, 0.05, 0.05)
         c.setPen(QtGui.QPen(color, 1))
         #c.setBrush(QtGui.QBrush(color, Qt.SolidPattern))
        
@@ -594,7 +594,8 @@ class TissuecyteApp(QWidget):
         if self.data_loaded:
             if self.currentView == 0:
                 if self.slider.value() < self.slider.maximum():
-                    plane = self.volume[self.slider.value(),:,:,:]
+                    print(self.volume.shape)
+                    plane = self.volume[self.slider.value(),:,:]
             elif self.currentView == 1:
                 if self.slider.value() < self.slider.maximum():
                     plane = self.volume[:, self.slider.value(),:,:]
@@ -728,10 +729,11 @@ class TissuecyteApp(QWidget):
         for imcolor in ['red', 'green', 'blue']:
             resamp_image = sitk.ReadImage(os.path.join(self.current_directory, 'resampled_' + imcolor + '.mhd'))
             intensity_arrays[imcolor] = sitk.GetArrayFromImage(resamp_image).T
+            print(intensity_arrays[imcolor].shape)
         self.int_arrays = intensity_arrays
         self.volume = self.getColorVolume()
         self.data_loaded = True
-
+        
     def getColorVolume(self, rgb_levels=DEFAULT_COLOR_VALUES):
         level_adjusted_arrays = []
         for colori, int_level in zip(['red', 'green', 'blue'], rgb_levels):
